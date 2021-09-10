@@ -19,7 +19,8 @@ ap = argparse.ArgumentParser()
 
 ap.add_argument("--embeddings", default="outputs/embeddings.pickle",
                 help='Path to embeddings')
-
+ap.add_argument("--weibull",default="outputs/weibull.pickle",
+                help='Path to weibull')
 ap.add_argument('--image-size', default='112,112', help='')
 ap.add_argument('--model', default='./models/insightface/models/model-y1-test2/model,0', help='path to load model.')
 ap.add_argument('--ga-model', default='', help='path to load model.')
@@ -51,7 +52,7 @@ def findCosineDistance(vector1, vector2):
     a = np.dot(vec1.T, vec2)
     b = np.dot(vec1.T, vec1)
     c = np.dot(vec2.T, vec2)
-    return 1 - (a / (np.sqrt(b) * np.sqrt(c)))
+    return (a / (np.sqrt(b) * np.sqrt(c)))
 
 
 def CosineSimilarity(test_vec, source_vecs):
@@ -70,9 +71,7 @@ def get_accuracy(predictions, labels):
 
 # Setup some useful arguments
 cosine_threshold = 0.8
-proba_threshold = 0.85
-comparing_num = 5
-
+weibull = pickle.loads(open(args.weibull, "rb").read())
 y_true = []
 y_pred = []
 for path_img in glob('./VN_celeb_openset/test_close/*/*'):
@@ -84,20 +83,20 @@ for path_img in glob('./VN_celeb_openset/test_close/*/*'):
     embedding = embedding_model.get_feature(nimg).reshape(1, -1)
 
     text = "Unknown"
-    final_score = 1
+    final_score = 0
     final_lb = 0
     for selected_idx in range(len(embeddings)):
         compare_embeddings = embeddings[selected_idx]
         # Calculate cosine similarity
-        cos_similarity = findCosineDistance(embedding, compare_embeddings)
-        if cos_similarity < final_score:
+        prob = weibull.predict(compare_embeddings)
+        if cos_similarity > final_score:
             final_score = cos_similarity
             final_lb = selected_idx
     y_pred.append(labels[final_lb])
 y_true = np.array(y_true)
 y_pred = np.array(y_pred)
 accuracy = get_accuracy(y_pred, y_true)
-print("accuracy: {}%".format(accuracy * 100))
+print("accuracy: {}%".format(round(accuracy * 100,2)))
 
 
 
